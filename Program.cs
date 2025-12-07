@@ -25,21 +25,33 @@ namespace AccountAPI
 
             var app = builder.Build();
 
-            // Always enable Swagger (so we can test inside Docker)
+            // Enable Swagger for both development and production
             app.UseSwagger();
             app.UseSwaggerUI();
 
-            // Only use HTTPS redirection if not running inside Docker
-            var port = Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "";
-            if (!port.Contains("8080"))
+            // Redirect root URL to the Swagger UI
+            app.Use(async (context, next) =>
+            {
+                if (context.Request.Path == "/")
+                {
+                    context.Response.Redirect("/swagger");
+                    return;
+                }
+                await next();
+            });
+
+            // Disable HTTPS redirection inside Docker/Render
+            if (!app.Environment.IsDevelopment())
+            {
+                // No HTTPS redirect to avoid issues in container environments
+            }
+            else
             {
                 app.UseHttpsRedirection();
             }
 
             app.UseAuthorization();
-
             app.MapControllers();
-
             app.Run();
         }
     }
