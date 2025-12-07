@@ -14,7 +14,7 @@ namespace AccountAPI
 
             // Add services to the container.
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             builder.Services.AddScoped<AuthService>();
             builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
@@ -24,6 +24,12 @@ namespace AccountAPI
             builder.Services.AddSwaggerGen();
 
             var app = builder.Build();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                db.Database.Migrate();
+            }
 
             // Enable Swagger for both development and production
             app.UseSwagger();
