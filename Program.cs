@@ -12,10 +12,15 @@ namespace AccountAPI
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            // -----------------------------
+            // Configure PostgreSQL Database
+            // -----------------------------
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+            // -----------------------------
+            // Configure services
+            // -----------------------------
             builder.Services.AddScoped<AuthService>();
             builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
@@ -25,17 +30,24 @@ namespace AccountAPI
 
             var app = builder.Build();
 
+            // -----------------------------
+            // Run pending migrations automatically
+            // -----------------------------
             using (var scope = app.Services.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 db.Database.Migrate();
             }
 
-            // Enable Swagger for both development and production
+            // -----------------------------
+            // Enable Swagger
+            // -----------------------------
             app.UseSwagger();
             app.UseSwaggerUI();
 
-            // Redirect root URL to the Swagger UI
+            // -----------------------------
+            // Redirect root URL "/" to Swagger
+            // -----------------------------
             app.Use(async (context, next) =>
             {
                 if (context.Request.Path == "/")
@@ -46,18 +58,17 @@ namespace AccountAPI
                 await next();
             });
 
-            // Disable HTTPS redirection inside Docker/Render
-            if (!app.Environment.IsDevelopment())
-            {
-                // No HTTPS redirect to avoid issues in container environments
-            }
-            else
+            // -----------------------------
+            // HTTPS redirection only for dev
+            // -----------------------------
+            if (app.Environment.IsDevelopment())
             {
                 app.UseHttpsRedirection();
             }
 
             app.UseAuthorization();
             app.MapControllers();
+
             app.Run();
         }
     }
